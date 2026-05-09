@@ -24,6 +24,18 @@
         <div class="card"><h3>TOTAL ALERTS</h3><p id="total-alerts">-</p></div>
         <div class="card"><h3>TOTAL LOGS</h3><p id="total-logs">-</p></div>
     </div>
+    <div style="margin: 20px 0;">
+    <label style="color: #8b949e; font-size: 12px;">FILTER LOGS BY SERVICE</label><br><br>
+    <input type="text" id="log-filter" placeholder="e.g. sudo, sshd, cron" 
+    style="background: #161b22; color: #c9d1d9; border: 1px solid #30363d; 
+    padding: 8px 12px; border-radius: 6px; width: 300px; font-family: monospace;">
+    <button onclick="applyFilter()" 
+    style="background: #238636; color: white; border: none; padding: 8px 16px; 
+    border-radius: 6px; margin-left: 10px; cursor: pointer; font-family: monospace;">FILTER</button>
+    <button onclick="clearFilter()" 
+    style="background: #21262d; color: #c9d1d9; border: 1px solid #30363d; padding: 8px 16px; 
+    border-radius: 6px; margin-left: 5px; cursor: pointer; font-family: monospace;">CLEAR</button>
+</div>
 
     <h2>Recent Alerts</h2>
     <table id="alerts-table">
@@ -50,7 +62,66 @@
         }
 
         loadStats();
-        loadAlerts();
+        async function loadLogs() {
+    const res = await fetch('/api/logs');
+    const logs = await res.json();
+    const table = document.getElementById('logs-table');
+    logs.forEach(l => {
+        const row = table.insertRow();
+        row.innerHTML = `<td>${l.id}</td><td>${l.timestamp}</td><td>${l.host}</td><td>${l.service}</td><td>${l.message}</td>`;
+    });
+}
+loadStats();
+loadAlerts();
+loadLogs();
+let allLogs = [];
+
+async function loadLogs() {
+    const res = await fetch('/api/logs');
+    allLogs = await res.json();
+    renderLogs(allLogs);
+}
+
+function renderLogs(logs) {
+    const table = document.getElementById('logs-table');
+    while (table.rows.length > 1) table.deleteRow(1);
+    logs.forEach(l => {
+        const row = table.insertRow();
+        row.innerHTML = `<td>${l.id}</td><td>${l.timestamp}</td><td>${l.host}</td><td>${l.service}</td><td>${l.message}</td>`;
+    });
+}
+
+function applyFilter() {
+    const keyword = document.getElementById('log-filter').value.toLowerCase();
+    if (!keyword) return;
+    const filtered = allLogs.filter(l => l.service.toLowerCase().includes(keyword));
+    renderLogs(filtered);
+}
+
+function clearFilter() {
+    document.getElementById('log-filter').value = '';
+    renderLogs(allLogs);
+}
+
+setInterval(async () => {
+    document.getElementById('total-alerts').textContent = '-';
+    document.getElementById('total-logs').textContent = '-';
+    const alertTable = document.getElementById('alerts-table');
+    while (alertTable.rows.length > 1) alertTable.deleteRow(1);
+    const keyword = document.getElementById('log-filter').value.toLowerCase();
+    await loadLogs();
+    if (keyword) {
+        const filtered = allLogs.filter(l => l.service.toLowerCase().includes(keyword));
+        renderLogs(filtered);
+    }
+    loadStats();
+    loadAlerts();
+}, 10000);
+        
     </script>
+    <h2>Recent Logs</h2>
+    <table id="logs-table">
+        <tr><th>ID</th><th>TIMESTAMP</th><th>HOST</th><th>SERVICE</th><th>MESSAGE</th></tr>
+    </table>
 </body>
 </html>

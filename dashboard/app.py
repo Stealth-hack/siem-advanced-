@@ -1,3 +1,6 @@
+import sys
+sys.path.append('/home/abdulrahman/siem')
+from detection.anomaly_detector import run_anomaly_detection
 from flask import Flask, jsonify, render_template
 import sqlite3
 
@@ -17,6 +20,11 @@ def query_db(sql):
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/api/anomalies')
+def get_anomalies():
+    anomalies = run_anomaly_detection()
+    return jsonify(anomalies)
 
 @app.route('/api/alerts')
 def get_alerts():

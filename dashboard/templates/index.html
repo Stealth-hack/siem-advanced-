@@ -41,84 +41,90 @@
     <table id="alerts-table">
         <tr><th>ID</th><th>TYPE</th><th>IP</th><th>ATTEMPTS</th><th>TIMESTAMP</th></tr>
     </table>
+    <h2>ML Anomalies</h2>
+    <table id="anomalies-table">
+    <tr><th>TIMESTAMP</th><th>SERVICE</th><th>MESSAGE</th></tr>
+    </table>
 
-    <script>
-        async function loadStats() {
-            const res = await fetch('/api/stats');
-            const data = await res.json();
-            document.getElementById('total-alerts').textContent = data.total_alerts;
-            document.getElementById('total-logs').textContent = data.total_logs;
-        }
+     <script>
+    let allLogs = [];
 
-        async function loadAlerts() {
-            const res = await fetch('/api/alerts');
-            const alerts = await res.json();
-            const table = document.getElementById('alerts-table');
-            alerts.forEach(a => {
-                const row = table.insertRow();
-                row.className = 'alert-row';
-                row.innerHTML = `<td>${a.id}</td><td>${a.alert_type}</td><td>${a.ip}</td><td>${a.attempts}</td><td>${a.timestamp}</td>`;
-            });
-        }
+    async function loadStats() {
+        const res = await fetch('/api/stats');
+        const data = await res.json();
+        document.getElementById('total-alerts').textContent = data.total_alerts;
+        document.getElementById('total-logs').textContent = data.total_logs;
+    }
 
-        loadStats();
-        async function loadLogs() {
-    const res = await fetch('/api/logs');
-    const logs = await res.json();
-    const table = document.getElementById('logs-table');
-    logs.forEach(l => {
-        const row = table.insertRow();
-        row.innerHTML = `<td>${l.id}</td><td>${l.timestamp}</td><td>${l.host}</td><td>${l.service}</td><td>${l.message}</td>`;
-    });
-}
-loadStats();
-loadAlerts();
-loadLogs();
-let allLogs = [];
+    async function loadAlerts() {
+        const res = await fetch('/api/alerts');
+        const alerts = await res.json();
+        const table = document.getElementById('alerts-table');
+        while (table.rows.length > 1) table.deleteRow(1);
+        alerts.forEach(a => {
+            const row = table.insertRow();
+            row.className = 'alert-row';
+            row.innerHTML = `<td>${a.id}</td><td>${a.alert_type}</td><td>${a.ip}</td><td>${a.attempts}</td><td>${a.timestamp}</td>`;
+        });
+    }
 
-async function loadLogs() {
-    const res = await fetch('/api/logs');
-    allLogs = await res.json();
-    renderLogs(allLogs);
-}
+    async function loadLogs() {
+        const res = await fetch('/api/logs');
+        allLogs = await res.json();
+        renderLogs(allLogs);
+    }
 
-function renderLogs(logs) {
-    const table = document.getElementById('logs-table');
-    while (table.rows.length > 1) table.deleteRow(1);
-    logs.forEach(l => {
-        const row = table.insertRow();
-        row.innerHTML = `<td>${l.id}</td><td>${l.timestamp}</td><td>${l.host}</td><td>${l.service}</td><td>${l.message}</td>`;
-    });
-}
+    function renderLogs(logs) {
+        const table = document.getElementById('logs-table');
+        while (table.rows.length > 1) table.deleteRow(1);
+        logs.forEach(l => {
+            const row = table.insertRow();
+            row.innerHTML = `<td>${l.id}</td><td>${l.timestamp}</td><td>${l.host}</td><td>${l.service}</td><td>${l.message}</td>`;
+        });
+    }
 
-function applyFilter() {
-    const keyword = document.getElementById('log-filter').value.toLowerCase();
-    if (!keyword) return;
-    const filtered = allLogs.filter(l => l.service.toLowerCase().includes(keyword));
-    renderLogs(filtered);
-}
+    async function loadAnomalies() {
+        const res = await fetch('/api/anomalies');
+        const anomalies = await res.json();
+        const table = document.getElementById('anomalies-table');
+        while (table.rows.length > 1) table.deleteRow(1);
+        anomalies.forEach(a => {
+            const row = table.insertRow();
+            row.style.color = '#d29922';
+            row.innerHTML = `<td>${a.timestamp}</td><td>${a.service}</td><td>${a.message}</td>`;
+        });
+    }
 
-function clearFilter() {
-    document.getElementById('log-filter').value = '';
-    renderLogs(allLogs);
-}
-
-setInterval(async () => {
-    document.getElementById('total-alerts').textContent = '-';
-    document.getElementById('total-logs').textContent = '-';
-    const alertTable = document.getElementById('alerts-table');
-    while (alertTable.rows.length > 1) alertTable.deleteRow(1);
-    const keyword = document.getElementById('log-filter').value.toLowerCase();
-    await loadLogs();
-    if (keyword) {
+    function applyFilter() {
+        const keyword = document.getElementById('log-filter').value.toLowerCase();
+        if (!keyword) return;
         const filtered = allLogs.filter(l => l.service.toLowerCase().includes(keyword));
         renderLogs(filtered);
     }
+
+    function clearFilter() {
+        document.getElementById('log-filter').value = '';
+        renderLogs(allLogs);
+    }
+
     loadStats();
     loadAlerts();
-}, 10000);
-        
-    </script>
+    loadAnomalies();
+    loadLogs();
+
+    setInterval(async () => {
+        const keyword = document.getElementById('log-filter').value.toLowerCase();
+        loadStats();
+        loadAlerts();
+        loadAnomalies();
+        await loadLogs();
+        if (keyword) {
+            const filtered = allLogs.filter(l => l.service.toLowerCase().includes(keyword));
+            renderLogs(filtered);
+        }
+    }, 10000);
+</script>
+
     <h2>Recent Logs</h2>
     <table id="logs-table">
         <tr><th>ID</th><th>TIMESTAMP</th><th>HOST</th><th>SERVICE</th><th>MESSAGE</th></tr>

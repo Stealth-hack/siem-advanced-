@@ -3,57 +3,208 @@
 <head>
     <meta charset="UTF-8">
     <title>SIEM Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #0d1117; color: #c9d1d9; font-family: monospace; padding: 20px; }
-        h1 { color: #58a6ff; }
-        .stats { display: flex; gap: 20px; margin-bottom: 30px; }
-        .card { background: #161b22; padding: 20px; border-radius: 8px; min-width: 150px; }
-        .card h3 { margin: 0; color: #8b949e; font-size: 12px; }
-        .card p { margin: 5px 0 0; font-size: 28px; color: #58a6ff; }
-        table { width: 100%; border-collapse: collapse; background: #161b22; border-radius: 8px; }
-        th { background: #21262d; padding: 10px; text-align: left; color: #8b949e; font-size: 12px; }
-        td { padding: 10px; border-top: 1px solid #21262d; font-size: 13px; }
-        .alert-row { color: #f85149; }
-        h2 { color: #58a6ff; margin-top: 30px; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #21262d; padding-bottom: 15px; }
+        .header h1 { color: #58a6ff; font-size: 20px; }
+        .header-right { display: flex; align-items: center; gap: 20px; }
+        .last-refresh { color: #8b949e; font-size: 11px; }
+        .logout { color: #f85149; text-decoration: none; font-size: 12px; border: 1px solid #f85149; padding: 4px 10px; border-radius: 4px; }
+        .logout:hover { background: #f85149; color: white; }
+
+        .stats-row { display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; }
+        .stat-card { background: #161b22; padding: 20px 25px; border-radius: 8px; border: 1px solid #21262d; flex: 1; min-width: 150px; }
+        .stat-card h3 { color: #8b949e; font-size: 11px; margin-bottom: 8px; letter-spacing: 1px; }
+        .stat-card .number { font-size: 32px; font-weight: bold; }
+        .stat-card.alerts .number { color: #f85149; }
+        .stat-card.logs .number { color: #58a6ff; }
+        .stat-card.anomalies .number { color: #d29922; }
+        .stat-card.status .number { color: #3fb950; font-size: 16px; margin-top: 5px; }
+
+        .charts-row { display: flex; gap: 15px; margin-bottom: 25px; }
+        .chart-card { background: #161b22; padding: 20px; border-radius: 8px; border: 1px solid #21262d; flex: 1; }
+        .chart-card h2 { color: #8b949e; font-size: 12px; letter-spacing: 1px; margin-bottom: 15px; }
+
+        .section { background: #161b22; border-radius: 8px; border: 1px solid #21262d; margin-bottom: 20px; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 1px solid #21262d; }
+        .section-header h2 { color: #c9d1d9; font-size: 13px; letter-spacing: 1px; }
+        .badge { background: #21262d; padding: 2px 8px; border-radius: 10px; font-size: 11px; color: #8b949e; }
+
+        table { width: 100%; border-collapse: collapse; }
+        th { padding: 10px 20px; text-align: left; color: #8b949e; font-size: 11px; letter-spacing: 1px; border-bottom: 1px solid #21262d; }
+        td { padding: 10px 20px; font-size: 12px; border-bottom: 1px solid #161b22; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #1c2128; }
+
+        .severity { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+        .severity.critical { background: #3d1a1a; color: #f85149; }
+        .severity.warning { background: #2d2008; color: #d29922; }
+        .severity.info { background: #0d2030; color: #58a6ff; }
+
+        .filter-bar { padding: 15px 20px; border-bottom: 1px solid #21262d; display: flex; gap: 10px; align-items: center; }
+        .filter-bar input { background: #0d1117; color: #c9d1d9; border: 1px solid #30363d; padding: 6px 12px; border-radius: 6px; font-family: monospace; font-size: 12px; width: 250px; }
+        .btn { padding: 6px 14px; border-radius: 6px; border: none; cursor: pointer; font-family: monospace; font-size: 12px; }
+        .btn-green { background: #238636; color: white; }
+        .btn-gray { background: #21262d; color: #c9d1d9; border: 1px solid #30363d; }
+
+        .top-ips { padding: 15px 20px; }
+        .ip-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #21262d; }
+        .ip-row:last-child { border-bottom: none; }
+        .ip-bar-wrap { flex: 1; margin: 0 15px; background: #21262d; border-radius: 4px; height: 6px; }
+        .ip-bar { height: 6px; background: #f85149; border-radius: 4px; }
     </style>
 </head>
 <body>
-    <h1>🛡 SIEM Dashboard</h1>
 
-    <div class="stats">
-        <div class="card"><h3>TOTAL ALERTS</h3><p id="total-alerts">-</p></div>
-        <div class="card"><h3>TOTAL LOGS</h3><p id="total-logs">-</p></div>
+<div class="header">
+    <h1>🛡 SIEM Dashboard</h1>
+    <div class="header-right">
+        <span class="last-refresh" id="last-refresh">Last updated: —</span>
+        <a href="/logout" class="logout">LOGOUT</a>
     </div>
-    <div style="margin: 20px 0;">
-    <label style="color: #8b949e; font-size: 12px;">FILTER LOGS BY SERVICE</label><br><br>
-    <input type="text" id="log-filter" placeholder="e.g. sudo, sshd, cron" 
-    style="background: #161b22; color: #c9d1d9; border: 1px solid #30363d; 
-    padding: 8px 12px; border-radius: 6px; width: 300px; font-family: monospace;">
-    <button onclick="applyFilter()" 
-    style="background: #238636; color: white; border: none; padding: 8px 16px; 
-    border-radius: 6px; margin-left: 10px; cursor: pointer; font-family: monospace;">FILTER</button>
-    <button onclick="clearFilter()" 
-    style="background: #21262d; color: #c9d1d9; border: 1px solid #30363d; padding: 8px 16px; 
-    border-radius: 6px; margin-left: 5px; cursor: pointer; font-family: monospace;">CLEAR</button>
 </div>
 
-    <h2>Recent Alerts</h2>
-    <table id="alerts-table">
-        <tr><th>ID</th><th>TYPE</th><th>IP</th><th>ATTEMPTS</th><th>TIMESTAMP</th></tr>
-    </table>
-    <h2>ML Anomalies</h2>
-    <table id="anomalies-table">
-    <tr><th>TIMESTAMP</th><th>SERVICE</th><th>MESSAGE</th></tr>
-    </table>
+<div class="stats-row">
+    <div class="stat-card alerts">
+        <h3>TOTAL ALERTS</h3>
+        <div class="number" id="total-alerts">—</div>
+    </div>
+    <div class="stat-card logs">
+        <h3>TOTAL LOGS</h3>
+        <div class="number" id="total-logs">—</div>
+    </div>
+    <div class="stat-card anomalies">
+        <h3>ML ANOMALIES</h3>
+        <div class="number" id="total-anomalies">—</div>
+    </div>
+    <div class="stat-card status">
+        <h3>SYSTEM STATUS</h3>
+        <div class="number">● MONITORING</div>
+    </div>
+</div>
 
-     <script>
+<div class="charts-row">
+    <div class="chart-card" style="flex: 2;">
+        <h2>ALERT TIMELINE (LAST 7 DAYS)</h2>
+        <canvas id="timelineChart" height="80"></canvas>
+    </div>
+    <div class="chart-card" style="flex: 1;">
+        <h2>ALERT TYPES</h2>
+        <canvas id="typeChart" height="80"></canvas>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-header">
+        <h2>🚨 RECENT ALERTS</h2>
+        <span class="badge" id="alerts-badge">0</span>
+    </div>
+    <table id="alerts-table">
+        <tr><th>ID</th><th>TYPE</th><th>IP</th><th>ATTEMPTS</th><th>SEVERITY</th><th>TIMESTAMP</th></tr>
+    </table>
+</div>
+
+<div class="section">
+    <div class="section-header">
+        <h2>⚠ ML ANOMALIES</h2>
+        <span class="badge" id="anomalies-badge">0</span>
+    </div>
+    <table id="anomalies-table">
+        <tr><th>TIMESTAMP</th><th>SERVICE</th><th>SEVERITY</th><th>MESSAGE</th></tr>
+    </table>
+</div>
+
+<div class="section">
+    <div class="section-header">
+        <h2>📋 RECENT LOGS</h2>
+        <span class="badge" id="logs-badge">0</span>
+    </div>
+    <div class="filter-bar">
+        <input type="text" id="log-filter" placeholder="Filter by service: sudo, sshd, cron...">
+        <button class="btn btn-green" onclick="applyFilter()">FILTER</button>
+        <button class="btn btn-gray" onclick="clearFilter()">CLEAR</button>
+    </div>
+    <table id="logs-table">
+        <tr><th>ID</th><th>TIMESTAMP</th><th>HOST</th><th>SERVICE</th><th>MESSAGE</th></tr>
+    </table>
+</div>
+
+<div class="section">
+    <div class="section-header">
+        <h2>🎯 TOP ATTACKING IPs</h2>
+    </div>
+    <div class="top-ips" id="top-ips"></div>
+</div>
+
+<script>
     let allLogs = [];
+    let timelineChart, typeChart;
+
+    function initCharts() {
+        const tlCtx = document.getElementById('timelineChart').getContext('2d');
+        timelineChart = new Chart(tlCtx, {
+            type: 'bar',
+            data: { labels: [], datasets: [{ label: 'Alerts', data: [], backgroundColor: '#f8514966', borderColor: '#f85149', borderWidth: 1 }] },
+            options: { plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#8b949e', font: { family: 'monospace', size: 10 } }, grid: { color: '#21262d' } }, y: { ticks: { color: '#8b949e', font: { family: 'monospace', size: 10 } }, grid: { color: '#21262d' } } } }
+        });
+
+        const tpCtx = document.getElementById('typeChart').getContext('2d');
+        typeChart = new Chart(tpCtx, {
+            type: 'doughnut',
+            data: { labels: [], datasets: [{ data: [], backgroundColor: ['#f85149', '#d29922', '#58a6ff', '#3fb950'] }] },
+            options: { plugins: { legend: { labels: { color: '#8b949e', font: { family: 'monospace', size: 10 } } } } }
+        });
+    }
 
     async function loadStats() {
         const res = await fetch('/api/stats');
         const data = await res.json();
         document.getElementById('total-alerts').textContent = data.total_alerts;
         document.getElementById('total-logs').textContent = data.total_logs;
+        document.getElementById('alerts-badge').textContent = data.total_alerts;
+        document.getElementById('logs-badge').textContent = data.total_logs;
+
+        // top IPs
+        const topIpsDiv = document.getElementById('top-ips');
+        topIpsDiv.innerHTML = '';
+        const max = data.top_ips[0]?.count || 1;
+        data.top_ips.forEach(item => {
+            const pct = (item.count / max) * 100;
+            topIpsDiv.innerHTML += `
+                <div class="ip-row">
+                    <span style="color:#f85149;width:120px">${item.ip}</span>
+                    <div class="ip-bar-wrap"><div class="ip-bar" style="width:${pct}%"></div></div>
+                    <span style="color:#8b949e">${item.count} alerts</span>
+                </div>`;
+        });
+
+        // timeline chart
+        const days = {};
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            days[d.toISOString().split('T')[0]] = 0;
+        }
+        // count alerts per day from alerts table via api
+        const alertsRes = await fetch('/api/alerts');
+        const alerts = await alertsRes.json();
+        alerts.forEach(a => {
+            const day = a.timestamp.split('T')[0];
+            if (days[day] !== undefined) days[day]++;
+        });
+        timelineChart.data.labels = Object.keys(days);
+        timelineChart.data.datasets[0].data = Object.values(days);
+        timelineChart.update();
+
+        // type chart
+        const typeCounts = {};
+        alerts.forEach(a => { typeCounts[a.alert_type] = (typeCounts[a.alert_type] || 0) + 1; });
+        typeChart.data.labels = Object.keys(typeCounts);
+        typeChart.data.datasets[0].data = Object.values(typeCounts);
+        typeChart.update();
     }
 
     async function loadAlerts() {
@@ -63,8 +214,21 @@
         while (table.rows.length > 1) table.deleteRow(1);
         alerts.forEach(a => {
             const row = table.insertRow();
-            row.className = 'alert-row';
-            row.innerHTML = `<td>${a.id}</td><td>${a.alert_type}</td><td>${a.ip}</td><td>${a.attempts}</td><td>${a.timestamp}</td>`;
+            const severity = a.alert_type.includes('BRUTE') ? '<span class="severity critical">CRITICAL</span>' : '<span class="severity warning">WARNING</span>';
+            row.innerHTML = `<td>${a.id}</td><td style="color:#f85149">${a.alert_type}</td><td>${a.ip}</td><td>${a.attempts}</td><td>${severity}</td><td>${a.timestamp}</td>`;
+        });
+    }
+
+    async function loadAnomalies() {
+        const res = await fetch('/api/anomalies');
+        const anomalies = await res.json();
+        const table = document.getElementById('anomalies-table');
+        while (table.rows.length > 1) table.deleteRow(1);
+        document.getElementById('total-anomalies').textContent = anomalies.length;
+        document.getElementById('anomalies-badge').textContent = anomalies.length;
+        anomalies.forEach(a => {
+            const row = table.insertRow();
+            row.innerHTML = `<td>${a.timestamp}</td><td>${a.service}</td><td><span class="severity warning">WARNING</span></td><td>${a.message}</td>`;
         });
     }
 
@@ -83,23 +247,10 @@
         });
     }
 
-    async function loadAnomalies() {
-        const res = await fetch('/api/anomalies');
-        const anomalies = await res.json();
-        const table = document.getElementById('anomalies-table');
-        while (table.rows.length > 1) table.deleteRow(1);
-        anomalies.forEach(a => {
-            const row = table.insertRow();
-            row.style.color = '#d29922';
-            row.innerHTML = `<td>${a.timestamp}</td><td>${a.service}</td><td>${a.message}</td>`;
-        });
-    }
-
     function applyFilter() {
         const keyword = document.getElementById('log-filter').value.toLowerCase();
         if (!keyword) return;
-        const filtered = allLogs.filter(l => l.service.toLowerCase().includes(keyword));
-        renderLogs(filtered);
+        renderLogs(allLogs.filter(l => l.service.toLowerCase().includes(keyword)));
     }
 
     function clearFilter() {
@@ -107,27 +258,16 @@
         renderLogs(allLogs);
     }
 
-    loadStats();
-    loadAlerts();
-    loadAnomalies();
-    loadLogs();
-
-    setInterval(async () => {
+    async function refresh() {
         const keyword = document.getElementById('log-filter').value.toLowerCase();
-        loadStats();
-        loadAlerts();
-        loadAnomalies();
-        await loadLogs();
-        if (keyword) {
-            const filtered = allLogs.filter(l => l.service.toLowerCase().includes(keyword));
-            renderLogs(filtered);
-        }
-    }, 10000);
-</script>
+        await Promise.all([loadStats(), loadAlerts(), loadAnomalies(), loadLogs()]);
+        if (keyword) renderLogs(allLogs.filter(l => l.service.toLowerCase().includes(keyword)));
+        document.getElementById('last-refresh').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
+    }
 
-    <h2>Recent Logs</h2>
-    <table id="logs-table">
-        <tr><th>ID</th><th>TIMESTAMP</th><th>HOST</th><th>SERVICE</th><th>MESSAGE</th></tr>
-    </table>
+    initCharts();
+    refresh();
+    setInterval(refresh, 10000);
+</script>
 </body>
 </html>

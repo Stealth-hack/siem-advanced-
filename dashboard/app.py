@@ -1,4 +1,14 @@
 import sys
+import psycopg2
+from psycopg2.extras import RealDictCursor
+
+DB_CONFIG = {
+    "dbname": "siem_db",
+    "user": "siem_user",
+    "password": "siem2024",
+    "host": "localhost",
+    "port": "5432"
+}
 sys.path.append('/home/abdulrahman/siem')
 from detection.anomaly_detector import run_anomaly_detection
 from flask import Flask, jsonify, render_template, request, redirect, url_for, session
@@ -8,7 +18,6 @@ import sqlite3
 app = Flask(__name__)
 app.secret_key = 'siem-secret-key-change-in-production'
 
-DB_PATH = "/home/abdulrahman/siem/data/siem.db"
 
 # hardcoded for now, will move to database later
 USERS = {
@@ -24,11 +33,11 @@ def login_required(f):
     return decorated
 
 def query_db(sql):
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
+    conn = psycopg2.connect(**DB_CONFIG)
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
     cursor.execute(sql)
     rows = cursor.fetchall()
+    cursor.close()
     conn.close()
     return [dict(row) for row in rows]
 

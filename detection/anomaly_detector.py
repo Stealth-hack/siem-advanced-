@@ -1,18 +1,25 @@
-import sqlite3
+import psycopg2
 import numpy as np
 from sklearn.ensemble import IsolationForest
 from datetime import datetime
 
-DB_PATH = "/home/abdulrahman/siem/data/siem.db"
+DB_CONFIG = {
+    "dbname": "siem_db",
+    "user": "siem_user",
+    "password": "siem2024",
+    "host": "localhost",
+    "port": "5432"
+}
 
 def get_log_features():
-    conn = sqlite3.connect(DB_PATH)
+    conn = psycopg2.connect(**DB_CONFIG)
     cursor = conn.cursor()
     cursor.execute("""
         SELECT timestamp, service, message FROM logs
         ORDER BY id DESC LIMIT 500
     """)
     rows = cursor.fetchall()
+    cursor.close()
     conn.close()
     return rows
 

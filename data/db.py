@@ -1,16 +1,23 @@
-import sqlite3
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
-DB_PATH = "/home/abdulrahman/siem/data/siem.db"
+DB_CONFIG = {
+    "dbname": "siem_db",
+    "user": "siem_user",
+    "password": "siem2024",
+    "host": "localhost",
+    "port": "5432"
+}
 
 def get_connection():
-    return sqlite3.connect(DB_PATH)
+    return psycopg2.connect(**DB_CONFIG)
 
 def insert_log(parsed):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute('''
         INSERT INTO logs (timestamp, host, service, message)
-        VALUES (?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s)
     ''', (
         parsed["timestamp"],
         parsed["host"],
@@ -18,6 +25,7 @@ def insert_log(parsed):
         parsed["message"]
     ))
     conn.commit()
+    cursor.close()
     conn.close()
 
 def insert_alert(alert):
@@ -25,7 +33,7 @@ def insert_alert(alert):
     cursor = conn.cursor()
     cursor.execute('''
         INSERT INTO alerts (alert_type, ip, attempts, timestamp)
-        VALUES (?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s)
     ''', (
         alert["alert"],
         alert["ip"],
@@ -33,4 +41,5 @@ def insert_alert(alert):
         alert["timestamp"]
     ))
     conn.commit()
+    cursor.close()
     conn.close()

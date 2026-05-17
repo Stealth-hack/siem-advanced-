@@ -27,11 +27,15 @@ python3 dashboard/app.py &
 FLASK_PID=$!
 echo "[*] Dashboard PID: $FLASK_PID"
 
+python3 ingestion/syslog_reader.py &
+SYSLOG_READER_PID=$!
+echo "[*] Syslog reader PID: $SYSLOG_READER_PID"
+
 echo ""
 echo "[+] SIEM is running."
 echo "[+] Dashboard: http://0.0.0.0:5000"
 echo "[+] Press Ctrl+C to stop all services"
 
 # wait and handle shutdown
-trap "echo '[*] Shutting down...'; kill $LOG_PID $SYSLOG_PID $FLASK_PID; exit" INT
+trap "echo '[*] Shutting down...'; kill $LOG_PID $SYSLOG_READER_PID $SYSLOG_PID $FLASK_PID; exit" INT
 wait

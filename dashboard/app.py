@@ -99,5 +99,22 @@ def get_stats():
         "top_ips": top_ips
     })
 
+@app.route('/api/alerts/<int:alert_id>/review', methods=['POST'])
+@login_required
+def review_alert(alert_id):
+    conn = psycopg2.connect(**DB_CONFIG)
+    cursor = conn.cursor()
+    cursor.execute("UPDATE alerts SET reviewed = TRUE WHERE id = %s", (alert_id,))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return jsonify({"status": "reviewed", "id": alert_id})
+    
+    return jsonify({
+        "total_alerts": alerts_count,
+        "total_logs": logs_count,
+        "top_ips": top_ips
+    })
+
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)

@@ -103,7 +103,7 @@
         <span class="badge" id="alerts-badge">0</span>
     </div>
     <table id="alerts-table">
-        <tr><th>ID</th><th>TYPE</th><th>IP</th><th>ATTEMPTS</th><th>SEVERITY</th><th>TIMESTAMP</th></tr>
+        <tr><th>ID</th><th>TYPE</th><th>IP</th><th>ATTEMPTS</th><th>SEVERITY</th><th>TIMESTAMP</th><th>ACTION</th></tr>
     </table>
 </div>
 
@@ -215,7 +215,10 @@
         alerts.forEach(a => {
             const row = table.insertRow();
             const severity = a.alert_type.includes('BRUTE') ? '<span class="severity critical">CRITICAL</span>' : '<span class="severity warning">WARNING</span>';
-            row.innerHTML = `<td>${a.id}</td><td style="color:#f85149">${a.alert_type}</td><td>${a.ip}</td><td>${a.attempts}</td><td>${severity}</td><td>${a.timestamp}</td>`;
+            const reviewed = a.reviewed ? 'opacity:0.4' : '';
+            row.style.cssText = reviewed;
+            row.innerHTML = `<td>${a.id}</td><td style="color:#f85149">${a.alert_type}</td><td>${a.ip}</td><td>${a.attempts}</td><td>${severity}</td><td>${a.timestamp}</td><td><button onclick="reviewAlert(${a.id})"
+            style="background:#238636;color:white;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-family:monospace;font-size:11px">${a.reviewed ? 'REVIEWED' : 'MARK REVIEWED'}</button></td>`;
         });
     }
 
@@ -263,6 +266,11 @@
         await Promise.all([loadStats(), loadAlerts(), loadAnomalies(), loadLogs()]);
         if (keyword) renderLogs(allLogs.filter(l => l.service.toLowerCase().includes(keyword)));
         document.getElementById('last-refresh').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
+    }
+    
+    async function reviewAlert(id) {
+    await fetch(`/api/alerts/${id}/review`, { method: 'POST' });
+    refresh();
     }
 
     initCharts();

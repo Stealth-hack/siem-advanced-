@@ -2,6 +2,7 @@ import time
 import re
 import sys
 sys.path.append('/home/abdulrahman/siem')
+from alerting.email_alert import send_alert_email
 from detection.mikrotik_block import block_ip
 from detection.brute_force import check_brute_force
 from detection.port_scan import check_port_scan
@@ -35,6 +36,7 @@ def tail_log(filepath):
                     if alert:
                         print(f"\n🚨 ALERT: {alert}\n")
                         insert_alert(alert)
+                        send_alert_email(alert)
                         block_ip(alert["ip"])
             else:
                 time.sleep(0.5)

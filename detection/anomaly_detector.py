@@ -2,6 +2,8 @@ import psycopg2
 import numpy as np
 from sklearn.ensemble import IsolationForest
 from datetime import datetime
+import joblib
+import os
 
 DB_CONFIG = {
     "dbname": "siem_db",
@@ -10,6 +12,8 @@ DB_CONFIG = {
     "host": "localhost",
     "port": "5432"
 }
+
+MODEL_PATH = "/home/abdulrahman/siem/data/anomaly_model.pkl"
 
 def get_log_features():
     conn = psycopg2.connect(**DB_CONFIG)
@@ -44,15 +48,38 @@ def extract_features(rows):
 
     return np.array(features)
 
+def train_and_save_model():
+    rows = get_log_features()
+    if len(rows) < 10:
+        print("[!] Not enough logs to train model")
+        return None
+
+    features = extract_features(rows)
+    model = IsolationForest(contamination=0.05, random_state=42)
+    model.fit(features)
+    joblib.dump(model, MODEL_PATH)
+    print(f"[+] Model trained and saved to {MODEL_PATH}")
+    return model
+
+def load_or_train_model():
+    if os.path.exists(MODEL_PATH):
+        print("[*] Loading existing model...")
+        return joblib.load(MODEL_PATH)
+    else:
+        print("[*] No model found, training new one...")
+        return train_and_save_model()
+
 def run_anomaly_detection():
     rows = get_log_features()
     if len(rows) < 10:
         print("[!] Not enough logs for anomaly detection")
         return []
 
+    model = load_or_train_model()
+    if model is None:
+        return []
+
     features = extract_features(rows)
-    model = IsolationForest(contamination=0.05, random_state=42)
-    model.fit(features)
     predictions = model.predict(features)
 
     anomalies = []
@@ -71,7 +98,7 @@ def run_anomaly_detection():
     return anomalies
 
 if __name__ == "__main__":
+    print("[*] Training model...")
+    train_and_save_model()
     anomalies = run_anomaly_detection()
     print(f"[*] Found {len(anomalies)} anomalies")
-    for a in anomalies:
-        print(a)

@@ -1,23 +1,27 @@
 import sys
-import psycopg2
-from psycopg2.extras import RealDictCursor
+import os
+from dotenv import load_dotenv
 
-DB_CONFIG = {
-    "dbname": "siem_db",
-    "user": "siem_user",
-    "password": "siem2024",
-    "host": "localhost",
-    "port": "5432"
-}
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
+
 sys.path.append('/home/abdulrahman/siem')
+
 from detection.anomaly_detector import run_anomaly_detection
 from flask import Flask, jsonify, render_template, request, redirect, url_for, session
 from functools import wraps
-import sqlite3
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
 app = Flask(__name__)
-app.secret_key = 'siem-secret-key-change-in-production'
+app.secret_key = os.getenv("SECRET_KEY")
 
+DB_CONFIG = {
+    "dbname": os.getenv("DB_NAME"),
+    "user": os.getenv("DB_USER"),
+    "password": os.getenv("DB_PASSWORD"),
+    "host": os.getenv("DB_HOST"),
+    "port": os.getenv("DB_PORT")
+}
 
 # hardcoded for now, will move to database later
 USERS = {

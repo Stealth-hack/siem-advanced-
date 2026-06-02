@@ -4,16 +4,19 @@ from sklearn.ensemble import IsolationForest
 from datetime import datetime
 import joblib
 import os
+from dotenv import load_dotenv
+
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
 
 DB_CONFIG = {
-    "dbname": "siem_db",
-    "user": "siem_user",
-    "password": "siem2024",
-    "host": "localhost",
-    "port": "5432"
+    "dbname": os.getenv("DB_NAME"),
+    "user": os.getenv("DB_USER"),
+    "password": os.getenv("DB_PASSWORD"),
+    "host": os.getenv("DB_HOST"),
+    "port": os.getenv("DB_PORT")
 }
 
-MODEL_PATH = "/home/abdulrahman/siem/data/anomaly_model.pkl"
+MODEL_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "anomaly_model.pkl")
 
 def get_log_features():
     conn = psycopg2.connect(**DB_CONFIG)
@@ -35,8 +38,9 @@ def extract_features(rows):
             dt = datetime.fromisoformat(timestamp)
             hour = dt.hour
             minute = dt.minute
-        except:
+        except ValueError:
             hour, minute = 0, 0
+        
 
         is_failed = 1 if "Failed" in message else 0
         is_invalid = 1 if "Invalid" in message else 0
